@@ -1,65 +1,87 @@
-import Image from "next/image";
+'use client';
 
-export default function Home() {
+import { useEffect, useState } from 'react';
+import FundingTable from './components/FundingTable';
+import AuthBox from './components/AuthBox';
+import AlertPanel from './components/AlertPanel';
+
+export type SymbolSortMode = 'marketcap' | 'alpha';
+
+type User = {
+  id: string;
+  email: string;
+};
+
+export default function HomePage() {
+  // 並び替えモード
+  const [sortMode, setSortMode] =
+    useState<SymbolSortMode>('marketcap');
+
+  // ログインユーザー
+  const [user, setUser] = useState<User | null>(null);
+
+  // ログイン状態取得
+  useEffect(() => {
+    fetch('/api/me')
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (data?.user) {
+          setUser(data.user);
+        } else {
+          setUser(null);
+        }
+      });
+  }, []);
+
   return (
-    <div className="flex min-h-screen items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex min-h-screen w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
-        </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
-      </main>
-    </div>
+    <main style={{ padding: 24 }}>
+      <h1 style={{ fontSize: 24, fontWeight: 700, marginBottom: 16 }}>
+        Funding App
+      </h1>
+
+      {/* 認証UI */}
+      <div style={{ marginBottom: 24 }}>
+        <AuthBox />
+      </div>
+
+      {/* 並び替え UI */}
+      <div
+        style={{
+          marginBottom: 16,
+          display: 'flex',
+          alignItems: 'center',
+          gap: 8,
+        }}
+      >
+        <span style={{ fontWeight: 600, color: '#374151' }}>
+          並び替え
+        </span>
+
+        <select
+          value={sortMode}
+          onChange={(e) =>
+            setSortMode(e.target.value as SymbolSortMode)
+          }
+          style={{
+            padding: '6px 10px',
+            border: '1px solid #d1d5db',
+            borderRadius: 6,
+            background: '#ffffff',
+            fontSize: 14,
+          }}
+        >
+          <option value="marketcap">時価総額順</option>
+          <option value="alpha">アルファベット順</option>
+        </select>
+      </div>
+
+      {/* Funding Table */}
+      <FundingTable sortMode={sortMode} />
+
+      {/* ===== アラート機能（ログイン時のみ） ===== */}
+      {user && (
+        <AlertPanel userId={user.id} />
+      )}
+    </main>
   );
 }

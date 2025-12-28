@@ -1,0 +1,27 @@
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  password  String
+  createdAt DateTime @default(now())
+
+  alerts    Alert[]
+}
+
+model Alert {
+  id        String   @id @default(cuid())
+  userId    String
+
+  exchange  String   // binance / bitget / mexc
+  symbol    String   // BTCUSDT
+  direction String   // "above" | "below"
+  threshold Float    // 例: -0.05
+
+  enabled   Boolean  @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
