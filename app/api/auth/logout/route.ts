@@ -1,13 +1,16 @@
-import { NextResponse } from "next/server";
+import { NextResponse } from 'next/server';
+
+export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';
 
 export async function POST() {
-  const res = NextResponse.json({ message: "Logged out" });
+  const res = NextResponse.json({ ok: true });
 
-  res.cookies.set({
-    name: "token",
-    value: "",
+  // token cookie を消す
+  res.cookies.set('token', '', {
     httpOnly: true,
-    path: "/",
+    secure: process.env.NODE_ENV === 'production',
+    path: '/',
     maxAge: 0,
   });
 

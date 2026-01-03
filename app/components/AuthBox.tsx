@@ -1,216 +1,173 @@
-"use client";
+'use client';
 
-import { useEffect, useState } from "react";
+import { useEffect, useState } from 'react';
 
-type User = {
-  id: string;
-  email: string;
-};
-
-type Mode = "login" | "signup";
+type User = { id: string; email: string };
+type MeOk = { user: User };
+type MeErr = { error: string };
 
 export default function AuthBox() {
-  const [user, setUser] = useState<User | null>(null);
-  const [mode, setMode] = useState<Mode>("login");
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [showPassword, setShowPassword] = useState(false); // ★ 追加
-  const [error, setError] = useState("");
-  const [loading, setLoading] = useState(false);
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
 
-  // ログイン状態チェック
-  useEffect(() => {
-    fetch("/api/me")
-      .then((res) => (res.ok ? res.json() : null))
-      .then((data) => {
-        if (data?.user) setUser(data.user);
-      });
-  }, []);
+  const [me, setMe] = useState<User | null>(null);
+  const [status, setStatus] = useState<string>('');
 
-  async function login() {
-    setError("");
-    setLoading(true);
-
-    const res = await fetch("/api/auth/login", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email, password }),
+  async function refreshMe() {
+    const res = await fetch('/api/me', {
+      cache: 'no-store',
+      credentials: 'include',
     });
 
-    setLoading(false);
+    const data = (await res.json().catch(() => null)) as (MeOk | MeErr | null);
 
-    if (!res.ok) {
-      setError("ログインに失敗しました");
-      return;
+    if (res.ok && data && 'user' in data) {
+      setMe(data.user);
+    } else {
+      setMe(null);
     }
-
-    const data = await res.json();
-    setUser(data.user);
   }
 
-  async function signup() {
-    setError("");
-    setLoading(true);
+  useEffect(() => {
+    refreshMe();
+  }, []);
 
-    const res = await fetch("/api/auth/signup", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
+  async function signup() {
+    setStatus('');
+    const res = await fetch('/api/auth/signup', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      cache: 'no-store',
       body: JSON.stringify({ email, password }),
     });
 
-    setLoading(false);
-
+    const data = await res.json().catch(() => ({}));
     if (!res.ok) {
-      const data = await res.json();
-      setError(data?.error ?? "登録に失敗しました");
+      setStatus(data?.error ?? 'Signup failed');
       return;
     }
 
-    await login();
+    setStatus('Signup success. Now login.');
+  }
+
+  async function login() {
+    setStatus('');
+    const res = await fetch('/api/auth/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      cache: 'no-store',
+      body: JSON.stringify({ email, password }),
+    });
+
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      setStatus(data?.error ?? 'Login failed');
+      return;
+    }
+
+    setStatus('Login success');
+    window.dispatchEvent(new Event('auth:changed'));
+    await refreshMe();
   }
 
   async function logout() {
-    await fetch("/api/auth/logout", { method: "POST" });
-    setUser(null);
-    setEmail("");
-    setPassword("");
-    setShowPassword(false);
-    setMode("login");
-  }
+    setStatus('');
+    const res = await fetch('/api/auth/logout', {
+      method: 'POST',
+      credentials: 'include',
+      cache: 'no-store',
+    });
 
-  if (user) {
-    return (
-      <div style={box}>
-        <p style={{ marginBottom: 8 }}>ログイン中</p>
-        <strong>{user.email}</strong>
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      setStatus(data?.error ?? 'Logout failed');
+      return;
+    }
 
-        <button onClick={logout} style={button}>
-          ログアウト
-        </button>
-      </div>
-    );
+    setStatus('Logged out');
+    window.dispatchEvent(new Event('auth:changed'));
+    setMe(null);
   }
 
   return (
-    <div style={box}>
-      <h3 style={{ marginBottom: 12 }}>
-        {mode === "login" ? "ログイン" : "新規会員登録（無料）"}
-      </h3>
+    <div style={{ border: '1px solid #e5e7eb', borderRadius: 8, padding: 12 }}>
+      <div style={{ fontWeight: 700, marginBottom: 8 }}>Auth</div>
 
-      <input
-        placeholder="Email"
-        value={email}
-        onChange={(e) => setEmail(e.target.value)}
-        style={input}
-      />
-
-      {/* ★ パスワード入力 + 目アイコン */}
-      <div style={passwordWrapper}>
-        <input
-          type={showPassword ? "text" : "password"}
-          placeholder="Password"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          style={passwordInput}
-        />
-
-        <span
-          onClick={() => setShowPassword((v) => !v)}
-          style={eyeIcon}
-          title={showPassword ? "隠す" : "表示"}
-        >
-          {showPassword ? "🙈" : "👁"}
-        </span>
-      </div>
-
-      {error && <p style={{ color: "red" }}>{error}</p>}
-
-      {mode === "login" ? (
-        <>
-          <button onClick={login} style={button} disabled={loading}>
-            ログイン
+      {me ? (
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <div style={{ fontSize: 14 }}>
+            Logged in as <b>{me.email}</b>
+          </div>
+          <button
+            onClick={logout}
+            style={{
+              padding: '6px 10px',
+              border: '1px solid #d1d5db',
+              borderRadius: 6,
+              background: '#fff',
+              cursor: 'pointer',
+            }}
+          >
+            Logout
           </button>
-
-          <p style={switchText}>
-            はじめての方は{" "}
-            <span onClick={() => setMode("signup")} style={link}>
-              新規登録
-            </span>
-          </p>
-        </>
+        </div>
       ) : (
-        <>
-          <button onClick={signup} style={button} disabled={loading}>
-            無料で登録
-          </button>
+        <div style={{ display: 'grid', gap: 8, maxWidth: 360 }}>
+          <input
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            placeholder="email"
+            style={{ padding: 8, border: '1px solid #d1d5db', borderRadius: 6 }}
+            autoComplete="email"
+          />
+          <input
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            placeholder="password (min 6 chars)"
+            type="password"
+            style={{ padding: 8, border: '1px solid #d1d5db', borderRadius: 6 }}
+            autoComplete="current-password"
+          />
 
-          <p style={switchText}>
-            すでにアカウントをお持ちの方は{" "}
-            <span onClick={() => setMode("login")} style={link}>
-              ログイン
-            </span>
-          </p>
-        </>
+          <div style={{ display: 'flex', gap: 8 }}>
+            <button
+              onClick={signup}
+              style={{
+                flex: 1,
+                padding: '8px 10px',
+                border: '1px solid #d1d5db',
+                borderRadius: 6,
+                background: '#fff',
+                cursor: 'pointer',
+                fontWeight: 700,
+              }}
+            >
+              Signup
+            </button>
+            <button
+              onClick={login}
+              style={{
+                flex: 1,
+                padding: '8px 10px',
+                border: '1px solid #d1d5db',
+                borderRadius: 6,
+                background: '#111827',
+                color: '#fff',
+                cursor: 'pointer',
+                fontWeight: 700,
+              }}
+            >
+              Login
+            </button>
+          </div>
+        </div>
+      )}
+
+      {status && (
+        <div style={{ marginTop: 8, fontSize: 13, color: '#374151' }}>{status}</div>
       )}
     </div>
   );
 }
-
-/* =====================
-   Styles
-===================== */
-
-const box = {
-  padding: 16,
-  border: "1px solid #e5e7eb",
-  borderRadius: 8,
-  maxWidth: 320,
-};
-
-const input = {
-  display: "block",
-  width: "100%",
-  marginBottom: 8,
-  padding: 6,
-  border: "1px solid #d1d5db",
-  borderRadius: 4,
-};
-
-const passwordWrapper = {
-  position: "relative" as const,
-  marginBottom: 8,
-};
-
-const passwordInput = {
-  width: "100%",
-  padding: "6px 32px 6px 6px",
-  border: "1px solid #d1d5db",
-  borderRadius: 4,
-};
-
-const eyeIcon = {
-  position: "absolute" as const,
-  right: 8,
-  top: "50%",
-  transform: "translateY(-50%)",
-  cursor: "pointer",
-  userSelect: "none" as const,
-  fontSize: 16,
-};
-
-const button = {
-  marginTop: 8,
-  padding: "6px 12px",
-  width: "100%",
-};
-
-const switchText = {
-  marginTop: 12,
-  fontSize: 13,
-};
-
-const link = {
-  color: "#2563eb",
-  cursor: "pointer",
-  fontWeight: 600,
-};

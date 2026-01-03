@@ -1,64 +1,48 @@
-import { NextResponse } from "next/server";
-import bcrypt from "bcryptjs";
-import crypto from "crypto";
-import { prisma } from "@/app/lib/prisma";
-import { sendVerifyEmail } from "@/app/lib/sendVerifyEmail";
+import { NextResponse } from 'next/server';
+import bcrypt from 'bcryptjs';
+import { prisma } from '@/app/lib/prisma';
+
+export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';
 
 export async function POST(req: Request) {
   try {
     const { email, password } = await req.json();
 
-    // ---- バリデーション ----
     if (!email || !password) {
       return NextResponse.json(
-        { error: "email and password are required" },
+        { error: 'email and password are required' },
         { status: 400 }
       );
     }
 
-    // ---- 既存ユーザー確認 ----
-    const existingUser = await prisma.user.findUnique({
-      where: { email },
-    });
-
-    if (existingUser) {
+    const normalizedEmail = String(email).trim().toLowerCase();
+    if (normalizedEmail.length < 3 || String(password).length < 6) {
       return NextResponse.json(
-        { error: "User already exists" },
-        { status: 409 }
+        { error: 'invalid email or password (min password: 6 chars)' },
+        { status: 400 }
       );
     }
 
-    // ---- パスワードハッシュ ----
-    const hashedPassword = await bcrypt.hash(password, 10);
-
-    // ★ メール確認用トークン生成
-    const verifyToken = crypto.randomUUID();
-
-    // ---- ユーザー作成（未確認）----
-    const user = await prisma.user.create({
-      data: {
-        email,
-        password: hashedPassword,
-        emailVerified: false,
-        emailVerifyToken: verifyToken,
-      },
+    const existing = await prisma.user.findUnique({
+      where: { email: normalizedEmail },
+      select: { id: true },
     });
 
-    // ★ 確認メール送信
-    await sendVerifyEmail(user.email, verifyToken);
+    if (existing) {
+      return NextResponse.json({ error: 'email already exists' }, { status: 409 });
+    }
 
-    // ---- レスポンス ----
-    return NextResponse.json(
-      {
-        message: "Verification email sent",
-      },
-      { status: 201 }
-    );
-  } catch (err) {
-    console.error("[SIGNUP ERROR]", err);
-    return NextResponse.json(
-      { error: "Internal Server Error" },
-      { status: 500 }
-    );
+    const hashed = await bcrypt.hash(String(password), 10);
+
+    const user = await prisma.user.create({
+      data: { email: normalizedEmail, password: hashed },
+      select: { id: true, email: true, createdAt: true },
+    });
+
+    return NextResponse.json({ user }, { status: 201 });
+  } catch (e) {
+    console.error('POST /api/auth/signup failed:', e);
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

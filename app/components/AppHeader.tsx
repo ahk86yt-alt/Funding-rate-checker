@@ -1,31 +1,31 @@
-'use client';
-
-import Link from 'next/link';
+import HeaderNavClient from './HeaderNavClient';
 
 export default function AppHeader() {
   return (
     <header
       style={{
-        position: 'sticky',
-        top: 0,
-        zIndex: 50,
-        background: '#ffffff',
         borderBottom: '1px solid #e5e7eb',
+        background: '#fff',
       }}
     >
-      <Link
-        href="/"
+      <div
         style={{
-          display: 'block',
-          padding: '14px 16px',
-          fontSize: 18,
-          fontWeight: 800,
-          color: '#111827',
-          textDecoration: 'none',
+          maxWidth: 1100,
+          margin: '0 auto',
+          padding: '16px',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          gap: 16,
         }}
       >
-        資金調達率チェッカー
-      </Link>
+        <div style={{ fontSize: 22, fontWeight: 900 }}>
+          資金調達率チェッカー
+        </div>
+
+        {/* 右上ナビ（レート一覧 / アラート管理 / ログイン） */}
+        <HeaderNavClient />
+      </div>
     </header>
   );
 }

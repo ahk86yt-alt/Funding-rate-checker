@@ -1,38 +1,24 @@
 import './globals.css';
 import type { Metadata } from 'next';
-
-import AppHeader from '@/app/components/AppHeader';
-import AlertRunner from '@/app/components/AlertRunner';
+import AppHeader from './components/AppHeader';
 
 export const metadata: Metadata = {
   title: '資金調達率チェッカー',
-  description: '暗号資産先物の資金調達率を一覧・監視できるチェッカー',
+  description: '資金調達率の一覧・グラフ・アラート',
 };
 
 export default function RootLayout({
   children,
-}: {
+}: Readonly<{
   children: React.ReactNode;
-}) {
+}>) {
   return (
     <html lang="ja">
-      <body
-        style={{
-          margin: 0,
-          fontFamily:
-            'ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont',
-          background: '#ffffff',
-          color: '#111827',
-        }}
-      >
-        {/* 共通ヘッダー */}
+      <body style={{ margin: 0, background: '#ffffff', color: '#111827' }}>
         <AppHeader />
-
-        {/* 各ページ */}
-        <main style={{ padding: 16 }}>{children}</main>
-
-        {/* 常駐アラート監視 */}
-        <AlertRunner />
+        <div style={{ maxWidth: 1100, margin: '0 auto', padding: '16px' }}>
+          {children}
+        </div>
       </body>
     </html>
   );

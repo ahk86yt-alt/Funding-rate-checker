@@ -1,3 +1,12 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
 model User {
   id        String   @id @default(cuid())
   email     String   @unique
@@ -11,17 +20,42 @@ model Alert {
   id        String   @id @default(cuid())
   userId    String
 
-  exchange  String   // binance / bitget / mexc
-  symbol    String   // BTCUSDT
+  exchange  String
+  symbol    String
   direction String   // "above" | "below"
-  threshold Float    // 例: -0.05
-
+  threshold Float
   enabled   Boolean  @default(true)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  // ▼追加：発火済み判定・連投防止
+  lastSentAt   DateTime?
+  lastSentRate Float?
+
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
+  @@index([exchange, symbol])
+}
+
+model FundingPoint {
+  id        String   @id @default(cuid())
+  exchange  String
+  symbol    String
+  rate      Float
+  createdAt DateTime @default(now())
+
+  @@index([exchange, symbol, createdAt])
+  @@index([createdAt])
+}
+
+model FundingRateRecord {
+  id        String   @id @default(cuid())
+  exchange  String
+  symbol    String
+  rate      Float
+  createdAt DateTime @default(now())
+
+  @@index([exchange, symbol, createdAt])
 }
